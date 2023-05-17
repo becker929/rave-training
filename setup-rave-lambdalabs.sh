@@ -39,8 +39,8 @@ done
 mkdir "$HOME/.aws" && \
 cat > "$HOME/.aws/credentials" <<'EOT'
 [default]
-aws_access_key_id = AKIAY2TF4FNMD5LG5CY7
-aws_secret_access_key = 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
+aws_access_key_id = SOMEKEY
+aws_secret_access_key = SOMESECRET
 EOT
 
 cat > "$HOME/download_data.py" <<'EOT'
