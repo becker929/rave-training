@@ -21,7 +21,7 @@ Currently, A10 instances on Lambda Cloud (cloud.lambdalabs.com) are the target d
 1. In your local terminal, run ssh -i ~/path/to/lambda-key.pem -N -f -L localhost:16080:localhost:6080 ubuntu@<your.instance.ip>
 1. Now, you should be able to view the progress of the training via tensorboard by visiting `localhost:16080` in your browser
 
-
+Too complicated? Reach out to me and I may be able to help.
 
 # RAVE changes in this repo
 The `rave` subfolder contains a fork of `RAVE/rave`.
