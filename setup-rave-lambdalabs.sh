@@ -39,8 +39,8 @@ done
 mkdir "$HOME/.aws" && \
 cat > "$HOME/.aws/credentials" <<'EOT'
 [default]
-aws_access_key_id = SOMEKEY
-aws_secret_access_key = SOMESECRET
+aws_access_key_id = $1
+aws_secret_access_key = $2
 EOT
 
 cat > "$HOME/download_data.py" <<'EOT'
@@ -48,7 +48,7 @@ import boto3
 def download_file_from_s3(bucket_name, file_key, local_path):
     s3 = boto3.client('s3')
     s3.download_file(bucket_name, file_key, local_path)
-bucket_name = 'rave-training-data'
+bucket_name = '$3'
 file_key = 'Fatima Hajji - Fabrik Terraza 2021.mp3'
 local_path = '/home/ubuntu/training-data/' + file_key
 download_file_from_s3(bucket_name, file_key, local_path)

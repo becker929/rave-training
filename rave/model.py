@@ -114,7 +114,7 @@ class RAVE(pl.LightningModule):
         self.automatic_optimization = False
 
         # SCHEDULE
-        self.warmup = 500 # phase_1_duration
+        self.warmup = phase_1_duration
         self.warmup_quantize = warmup_quantize
         self.balancer = balancer()
 
