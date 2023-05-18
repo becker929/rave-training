@@ -1,0 +1,26 @@
+from __gin__ import dynamic_registration
+
+import rave
+from rave import blocks
+from rave import balancer
+
+LATENT_SIZE = 16
+NOISE_AUGMENTATION = 128
+
+blocks.EncoderV2.n_out = 1
+
+blocks.WasserteinEncoder:
+    encoder_cls = @blocks.EncoderV2
+    noise_augmentation = %NOISE_AUGMENTATION
+
+rave.RAVE:
+    encoder = @blocks.WasserteinEncoder
+    phase_1_duration = 200000
+
+balancer.Balancer:
+    weights = {
+        'fullband_spectral_distance': 2,
+        'multiband_spectral_distance': 2,
+        'regularization': 100,
+        'adversarial': 2,
+    }
