@@ -107,7 +107,7 @@ class RAVE(pl.LightningModule):
 
         self.register_buffer("latent_pca", torch.eye(latent_size, device="cuda"))
         self.register_buffer("latent_mean", torch.zeros(latent_size, device="cuda"))
-        self.register_buffer("fidelity", torch.zeros(latent_size), device="cuda")
+        self.register_buffer("fidelity", torch.zeros(latent_size, device="cuda"))
 
         self.latent_size = latent_size
 
