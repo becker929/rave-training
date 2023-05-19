@@ -6,8 +6,7 @@ import torch
 
 
 class EMA:
-
-    def __init__(self, beta: float = .999) -> None:
+    def __init__(self, beta: float = 0.999) -> None:
         self.shadows = {}
         self.beta = beta
 
@@ -15,7 +14,7 @@ class EMA:
         outputs = {}
         for k, v in inputs.items():
             if not k in self.shadows:
-                self.shadows[k] = v
+                self.shadows[k] = v.to("cuda")
             else:
                 self.shadows[k] *= self.beta
                 self.shadows[k] += (1 - self.beta) * v
@@ -25,7 +24,6 @@ class EMA:
 
 
 class Balancer:
-
     def __init__(
         self,
         ema_averager: Callable[[], EMA],
@@ -50,30 +48,32 @@ class Balancer:
 
         for k, v in losses.items():
             if self.deny_list is not None:
-                if k in self.deny_list: continue
+                if k in self.deny_list:
+                    continue
 
-            grads[k], = torch.autograd.grad(
-                v,
-                [model_output],
+            (grads[k],) = torch.autograd.grad(
+                v.to("cuda"),
+                [model_output.to("cuda")],
                 retain_graph=True,
             )
 
-            if (nans := torch.isnan(grads[k])).any():
-                count = nans.float().mean()
-                grads[k] = torch.where(nans, torch.zeros_like(nans), grads[k])
+            if (nans := torch.isnan(grads[k])).any().to("cuda"):
+                count = nans.float().mean().to("cuda")
+                grads[k] = torch.where(
+                    nans, torch.zeros_like(nans, device="cuda"), grads[k]
+                )
                 if logger is not None:
                     logger(f"{k}_nan_ratio", count)
 
-            norms[k] = grads[k].norm(
-                dim=tuple(range(1, grads[k].dim()))).mean()
+            norms[k] = grads[k].norm(dim=tuple(range(1, grads[k].dim()))).mean().to('cuda')
 
             if profiler is not None:
-                profiler(f'partial backward {k}')
+                profiler(f"partial backward {k}")
 
-        avg_norms = self.ema_averager(norms)
+        avg_norms = self.ema_averager(norms).to('cuda')
 
         if profiler is not None:
-            profiler('grad norm estimation')
+            profiler("grad norm estimation")
 
         sum_weights = sum([self.weights.get(k, 1) for k in avg_norms])
 
@@ -81,38 +81,38 @@ class Balancer:
             if self.scale_gradients:
                 ratio = self.weights.get(name, 1) / sum_weights
                 scale = ratio / (norm + 1e-6)
-                grads[name] *= scale
+                grads[name] *= scale.to('cuda')
 
                 if logger is not None:
-                    logger(f'scale_{name}', scale)
-                    logger(f'grad_norm_{name}', grads[name].norm())
-                    logger(f'target_norm_{name}', ratio)
+                    logger(f"scale_{name}", scale)
+                    logger(f"grad_norm_{name}", grads[name].norm())
+                    logger(f"target_norm_{name}", ratio)
             else:
                 scale = self.weights.get(name, 1)
-                grads[name] *= scale
+                grads[name] *= scale.to('cuda')
 
                 if logger is not None:
-                    logger(f'scale_{name}', scale)
-                    logger(f'grad_norm_{name}', grads[name].norm())
+                    logger(f"scale_{name}", scale)
+                    logger(f"grad_norm_{name}", grads[name].norm())
 
         if profiler is not None:
-            profiler('norm scaling')
+            profiler("norm scaling")
 
-        full_grad = sum([grads[name] for name in avg_norms.keys()])
+        full_grad = sum([grads[name].to('cuda') for name in avg_norms.keys()]).to('cuda')
         model_output.backward(full_grad, retain_graph=True)
 
         if profiler is not None:
-            profiler('scaled backward')
+            profiler("scaled backward")
 
         if self.deny_list is not None:
             for k in self.deny_list:
                 if k in losses:
-                    loss = losses[k] * self.weights.get(k, 1)
+                    loss = losses[k].to('cuda') * self.weights.get(k, 1).to('cuda')
                     if logger is not None:
-                        logger(f'scale_{name}', scale)
-                        logger(f'grad_norm_{name}', grads[name].norm())
+                        logger(f"scale_{name}", scale)
+                        logger(f"grad_norm_{name}", grads[name].norm())
                     if loss.requires_grad:
                         loss.backward(retain_graph=True)
 
         if profiler is not None:
-            profiler('denied backward')
+            profiler("denied backward")
