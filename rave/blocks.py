@@ -13,23 +13,21 @@ from .core import amp_to_impulse_response, fft_convolve, mod_sigmoid
 
 
 @gin.configurable
-def normalization(module: nn.Module, mode: str = 'identity'):
-    if mode == 'identity':
+def normalization(module: nn.Module, mode: str = "identity"):
+    if mode == "identity":
         return module
-    elif mode == 'weight_norm':
+    elif mode == "weight_norm":
         return weight_norm(module)
     else:
-        raise Exception(f'Normalization mode {mode} not supported')
+        raise Exception(f"Normalization mode {mode} not supported")
 
 
 class SampleNorm(nn.Module):
-
     def forward(self, x):
         return x / torch.norm(x, 2, 1, keepdim=True)
 
 
 class Residual(nn.Module):
-
     def __init__(self, module, cumulative_delay=0):
         super().__init__()
         additional_delay = module.cumulative_delay
@@ -46,13 +44,12 @@ class Residual(nn.Module):
 
 
 class ResidualLayer(nn.Module):
-
     def __init__(self, dim, kernel_size, dilations, cumulative_delay=0):
         super().__init__()
         net = []
         cd = 0
         for d in dilations:
-            net.append(nn.LeakyReLU(.2))
+            net.append(nn.LeakyReLU(0.2))
             net.append(
                 normalization(
                     cc.Conv1d(
@@ -62,7 +59,9 @@ class ResidualLayer(nn.Module):
                         dilation=d,
                         padding=cc.get_padding(kernel_size, dilation=d),
                         cumulative_delay=cd,
-                    )))
+                    )
+                )
+            )
             cd = net[-1].cumulative_delay
         self.net = Residual(
             cc.CachedSequential(*net),
@@ -75,21 +74,23 @@ class ResidualLayer(nn.Module):
 
 
 class DilatedUnit(nn.Module):
-
     def __init__(self, dim: int, kernel_size: int, dilation: int) -> None:
         super().__init__()
         net = [
-            nn.LeakyReLU(.2),
+            nn.LeakyReLU(0.2),
             normalization(
-                cc.Conv1d(dim,
-                          dim,
-                          kernel_size=kernel_size,
-                          dilation=dilation,
-                          padding=cc.get_padding(
-                              kernel_size,
-                              dilation=dilation,
-                          ))),
-            nn.LeakyReLU(.2),
+                cc.Conv1d(
+                    dim,
+                    dim,
+                    kernel_size=kernel_size,
+                    dilation=dilation,
+                    padding=cc.get_padding(
+                        kernel_size,
+                        dilation=dilation,
+                    ),
+                )
+            ),
+            nn.LeakyReLU(0.2),
             normalization(cc.Conv1d(dim, dim, kernel_size=1)),
         ]
 
@@ -101,12 +102,7 @@ class DilatedUnit(nn.Module):
 
 
 class ResidualBlock(nn.Module):
-
-    def __init__(self,
-                 dim,
-                 kernel_size,
-                 dilations_list,
-                 cumulative_delay=0) -> None:
+    def __init__(self, dim, kernel_size, dilations_list, cumulative_delay=0) -> None:
         super().__init__()
         layers = []
         cd = 0
@@ -118,7 +114,8 @@ class ResidualBlock(nn.Module):
                     kernel_size,
                     dilations,
                     cumulative_delay=cd,
-                ))
+                )
+            )
             cd = layers[-1].cumulative_delay
 
         self.net = cc.CachedSequential(
@@ -133,12 +130,7 @@ class ResidualBlock(nn.Module):
 
 @gin.configurable
 class ResidualStack(nn.Module):
-
-    def __init__(self,
-                 dim,
-                 kernel_sizes,
-                 dilations_list,
-                 cumulative_delay=0) -> None:
+    def __init__(self, dim, kernel_sizes, dilations_list, cumulative_delay=0) -> None:
         super().__init__()
         blocks = []
         for k in kernel_sizes:
@@ -153,22 +145,21 @@ class ResidualStack(nn.Module):
 
 
 class UpsampleLayer(nn.Module):
-
     def __init__(self, in_dim, out_dim, ratio, cumulative_delay=0):
         super().__init__()
-        net = [nn.LeakyReLU(.2)]
+        net = [nn.LeakyReLU(0.2)]
         if ratio > 1:
             net.append(
                 normalization(
-                    cc.ConvTranspose1d(in_dim,
-                                       out_dim,
-                                       2 * ratio,
-                                       stride=ratio,
-                                       padding=ratio // 2)))
+                    cc.ConvTranspose1d(
+                        in_dim, out_dim, 2 * ratio, stride=ratio, padding=ratio // 2
+                    )
+                )
+            )
         else:
             net.append(
-                normalization(
-                    cc.Conv1d(in_dim, out_dim, 3, padding=cc.get_padding(3))))
+                normalization(cc.Conv1d(in_dim, out_dim, 3, padding=cc.get_padding(3)))
+            )
 
         self.net = cc.CachedSequential(*net)
         self.cumulative_delay = self.net.cumulative_delay + cumulative_delay * ratio
@@ -179,7 +170,6 @@ class UpsampleLayer(nn.Module):
 
 @gin.configurable
 class NoiseGenerator(nn.Module):
-
     def __init__(self, in_size, data_size, ratios, noise_bands):
         super().__init__()
         net = []
@@ -194,19 +184,18 @@ class NoiseGenerator(nn.Module):
                     padding=cc.get_padding(3, r),
                     stride=r,
                     cumulative_delay=cum_delay,
-                ))
+                )
+            )
             cum_delay = net[-1].cumulative_delay
             if i != len(ratios) - 1:
-                net.append(nn.LeakyReLU(.2))
+                net.append(nn.LeakyReLU(0.2))
 
         self.net = cc.CachedSequential(*net)
         self.data_size = data_size
-        self.cumulative_delay = self.net.cumulative_delay * int(
-            np.prod(ratios))
+        self.cumulative_delay = self.net.cumulative_delay * int(np.prod(ratios))
 
         self.register_buffer(
-            "target_size",
-            torch.tensor(np.prod(ratios)).long(), device="cuda")
+            "target_size", torch.tensor(np.prod(ratios), device="cuda").long()
         )
 
     def forward(self, x):
@@ -223,7 +212,6 @@ class NoiseGenerator(nn.Module):
 
 
 class GRU(nn.Module):
-
     def __init__(self, latent_size: int, num_layers: int) -> None:
         super().__init__()
         self.gru = nn.GRU(
@@ -236,7 +224,8 @@ class GRU(nn.Module):
         self.enabled = True
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        if not self.enabled: return x
+        if not self.enabled:
+            return x
         x = x.permute(0, 2, 1)
         x = self.gru(x)[0]
         x = x.permute(0, 2, 1)
@@ -250,7 +239,6 @@ class GRU(nn.Module):
 
 
 class Generator(nn.Module):
-
     def __init__(
         self,
         latent_size,
@@ -266,22 +254,24 @@ class Generator(nn.Module):
             normalization(
                 cc.Conv1d(
                     latent_size,
-                    2**len(ratios) * capacity,
+                    2 ** len(ratios) * capacity,
                     7,
                     padding=cc.get_padding(7),
-                ))
+                )
+            )
         ]
 
         if recurrent_layer is not None:
             net.append(
                 recurrent_layer(
-                    dim=2**len(ratios) * capacity,
+                    dim=2 ** len(ratios) * capacity,
                     cumulative_delay=net[0].cumulative_delay,
-                ))
+                )
+            )
 
         for i, r in enumerate(ratios):
-            in_dim = 2**(len(ratios) - i) * capacity
-            out_dim = 2**(len(ratios) - i - 1) * capacity
+            in_dim = 2 ** (len(ratios) - i) * capacity
+            out_dim = 2 ** (len(ratios) - i - 1) * capacity
 
             net.append(
                 UpsampleLayer(
@@ -289,15 +279,17 @@ class Generator(nn.Module):
                     out_dim,
                     r,
                     cumulative_delay=net[-1].cumulative_delay,
-                ))
+                )
+            )
             net.append(
-                ResidualStack(out_dim,
-                              cumulative_delay=net[-1].cumulative_delay))
+                ResidualStack(out_dim, cumulative_delay=net[-1].cumulative_delay)
+            )
 
         self.net = cc.CachedSequential(*net)
 
         wave_gen = normalization(
-            cc.Conv1d(out_dim, data_size, 7, padding=cc.get_padding(7)))
+            cc.Conv1d(out_dim, data_size, 7, padding=cc.get_padding(7))
+        )
 
         loud_gen = normalization(
             cc.Conv1d(
@@ -306,7 +298,8 @@ class Generator(nn.Module):
                 2 * loud_stride + 1,
                 stride=loud_stride,
                 padding=cc.get_padding(2 * loud_stride + 1, loud_stride),
-            ))
+            )
+        )
 
         branches = [wave_gen, loud_gen]
 
@@ -352,7 +345,6 @@ class Generator(nn.Module):
 
 
 class Encoder(nn.Module):
-
     def __init__(
         self,
         data_size,
@@ -369,13 +361,13 @@ class Encoder(nn.Module):
 
         for i, r in enumerate(ratios):
             in_dim = 2**i * capacity
-            out_dim = 2**(i + 1) * capacity
+            out_dim = 2 ** (i + 1) * capacity
 
             if sample_norm:
                 net.append(SampleNorm())
             else:
                 net.append(nn.BatchNorm1d(in_dim))
-            net.append(nn.LeakyReLU(.2))
+            net.append(nn.LeakyReLU(0.2))
             net.append(
                 cc.Conv1d(
                     in_dim,
@@ -384,14 +376,15 @@ class Encoder(nn.Module):
                     padding=cc.get_padding(2 * r + 1, r),
                     stride=r,
                     cumulative_delay=net[-3].cumulative_delay,
-                ))
+                )
+            )
 
             for i in range(repeat_layers - 1):
                 if sample_norm:
                     net.append(SampleNorm())
                 else:
                     net.append(nn.BatchNorm1d(out_dim))
-                net.append(nn.LeakyReLU(.2))
+                net.append(nn.LeakyReLU(0.2))
                 net.append(
                     cc.Conv1d(
                         out_dim,
@@ -399,17 +392,19 @@ class Encoder(nn.Module):
                         3,
                         padding=cc.get_padding(3),
                         cumulative_delay=net[-3].cumulative_delay,
-                    ))
+                    )
+                )
 
-        net.append(nn.LeakyReLU(.2))
+        net.append(nn.LeakyReLU(0.2))
 
         if recurrent_layer is not None:
             net.append(
                 recurrent_layer(
                     dim=out_dim,
                     cumulative_delay=net[-2].cumulative_delay,
-                ))
-            net.append(nn.LeakyReLU(.2))
+                )
+            )
+            net.append(nn.LeakyReLU(0.2))
 
         net.append(
             cc.Conv1d(
@@ -419,7 +414,8 @@ class Encoder(nn.Module):
                 padding=cc.get_padding(5),
                 groups=n_out,
                 cumulative_delay=net[-2].cumulative_delay,
-            ))
+            )
+        )
 
         self.net = cc.CachedSequential(*net)
         self.cumulative_delay = self.net.cumulative_delay
@@ -429,16 +425,15 @@ class Encoder(nn.Module):
         return z
 
 
-def normalize_dilations(dilations: Union[Sequence[int],
-                                         Sequence[Sequence[int]]],
-                        ratios: Sequence[int]):
+def normalize_dilations(
+    dilations: Union[Sequence[int], Sequence[Sequence[int]]], ratios: Sequence[int]
+):
     if isinstance(dilations[0], int):
         dilations = [dilations for _ in ratios]
     return dilations
 
 
 class EncoderV2(nn.Module):
-
     def __init__(
         self,
         data_size: int,
@@ -467,7 +462,8 @@ class EncoderV2(nn.Module):
                     capacity,
                     kernel_size=kernel_size * 2 + 1,
                     padding=cc.get_padding(kernel_size * 2 + 1),
-                )),
+                )
+            ),
         ]
 
         num_channels = capacity
@@ -480,10 +476,12 @@ class EncoderV2(nn.Module):
                             dim=num_channels,
                             kernel_size=kernel_size,
                             dilation=d,
-                        )))
+                        )
+                    )
+                )
 
             # ADD DOWNSAMPLING UNIT
-            net.append(nn.LeakyReLU(.2))
+            net.append(nn.LeakyReLU(0.2))
 
             if keep_dim:
                 out_channels = num_channels * r
@@ -497,11 +495,13 @@ class EncoderV2(nn.Module):
                         kernel_size=2 * r,
                         stride=r,
                         padding=cc.get_padding(2 * r, r),
-                    )))
+                    )
+                )
+            )
 
             num_channels = out_channels
 
-        net.append(nn.LeakyReLU(.2))
+        net.append(nn.LeakyReLU(0.2))
         net.append(
             normalization(
                 cc.Conv1d(
@@ -509,7 +509,9 @@ class EncoderV2(nn.Module):
                     latent_size * n_out,
                     kernel_size=kernel_size,
                     padding=cc.get_padding(kernel_size),
-                )))
+                )
+            )
+        )
 
         if recurrent_layer is not None:
             net.append(recurrent_layer(latent_size * n_out))
@@ -524,7 +526,6 @@ class EncoderV2(nn.Module):
 
 
 class GeneratorV2(nn.Module):
-
     def __init__(
         self,
         data_size: int,
@@ -544,7 +545,7 @@ class GeneratorV2(nn.Module):
         if keep_dim:
             num_channels = np.prod(ratios) * capacity
         else:
-            num_channels = 2**len(ratios) * capacity
+            num_channels = 2 ** len(ratios) * capacity
 
         net = []
 
@@ -558,7 +559,9 @@ class GeneratorV2(nn.Module):
                     num_channels,
                     kernel_size=kernel_size,
                     padding=cc.get_padding(kernel_size),
-                )), )
+                )
+            ),
+        )
 
         for r, dilations in zip(ratios, dilations_list):
             # ADD UPSAMPLING UNIT
@@ -566,14 +569,14 @@ class GeneratorV2(nn.Module):
                 out_channels = num_channels // r
             else:
                 out_channels = num_channels // 2
-            net.append(nn.LeakyReLU(.2))
+            net.append(nn.LeakyReLU(0.2))
             net.append(
                 normalization(
-                    cc.ConvTranspose1d(num_channels,
-                                       out_channels,
-                                       2 * r,
-                                       stride=r,
-                                       padding=r // 2)))
+                    cc.ConvTranspose1d(
+                        num_channels, out_channels, 2 * r, stride=r, padding=r // 2
+                    )
+                )
+            )
 
             num_channels = out_channels
 
@@ -585,9 +588,11 @@ class GeneratorV2(nn.Module):
                             dim=num_channels,
                             kernel_size=kernel_size,
                             dilation=d,
-                        )))
+                        )
+                    )
+                )
 
-        net.append(nn.LeakyReLU(.2))
+        net.append(nn.LeakyReLU(0.2))
         net.append(
             normalization(
                 cc.Conv1d(
@@ -595,7 +600,9 @@ class GeneratorV2(nn.Module):
                     data_size * 2 if amplitude_modulation else data_size,
                     kernel_size=kernel_size * 2 + 1,
                     padding=cc.get_padding(kernel_size * 2 + 1),
-                )))
+                )
+            )
+        )
 
         self.net = cc.CachedSequential(*net)
         self.amplitude_modulation = amplitude_modulation
@@ -616,7 +623,6 @@ class GeneratorV2(nn.Module):
 
 
 class VariationalEncoder(nn.Module):
-
     def __init__(self, encoder):
         super().__init__()
         self.encoder = encoder().to("cuda")
@@ -646,7 +652,6 @@ class VariationalEncoder(nn.Module):
 
 
 class WasserteinEncoder(nn.Module):
-
     def __init__(
         self,
         encoder_cls,
@@ -673,8 +678,9 @@ class WasserteinEncoder(nn.Module):
         reg = self.compute_mmd(z_reshaped, torch.randn_like(z_reshaped))
 
         if self.noise_augmentation:
-            noise = torch.randn(z.shape[0], self.noise_augmentation,
-                                z.shape[-1], device="cuda").type_as(z)
+            noise = torch.randn(
+                z.shape[0], self.noise_augmentation, z.shape[-1], device="cuda"
+            ).type_as(z)
             z = torch.cat([z, noise], 1)
 
         return z, reg.mean()
@@ -692,12 +698,9 @@ class WasserteinEncoder(nn.Module):
 
 
 class DiscreteEncoder(nn.Module):
-
-    def __init__(self,
-                 encoder_cls,
-                 vq_cls,
-                 num_quantizers,
-                 noise_augmentation: int = 0):
+    def __init__(
+        self, encoder_cls, vq_cls, num_quantizers, noise_augmentation: int = 0
+    ):
         super().__init__()
         self.encoder = encoder_cls().to("cuda")
         self.rvq = vq_cls()
@@ -714,8 +717,9 @@ class DiscreteEncoder(nn.Module):
             diff = torch.zeros_like(z, device="cuda").mean()
 
         if self.noise_augmentation:
-            noise = torch.randn(z.shape[0], self.noise_augmentation,
-                                z.shape[-1], device="cuda").type_as(z)
+            noise = torch.randn(
+                z.shape[0], self.noise_augmentation, z.shape[-1], device="cuda"
+            ).type_as(z)
             z = torch.cat([z, noise], 1)
 
         return z, diff
@@ -731,7 +735,6 @@ class DiscreteEncoder(nn.Module):
 
 
 class SphericalEncoder(nn.Module):
-
     def __init__(self, encoder_cls: Callable[[], nn.Module]) -> None:
         super().__init__()
         self.encoder = encoder_cls().to("cuda")
@@ -762,23 +765,29 @@ def unit_norm_vector_to_angles(x: torch.Tensor) -> torch.Tensor:
     )
     angles[:, :-1] = angles[:, :-1] / np.pi
     angles[:, -1] = angles[:, -1] / (2 * np.pi)
-    return 2 * (angles - .5)
+    return 2 * (angles - 0.5)
 
 
 def angles_to_unit_norm_vector(angles: torch.Tensor) -> torch.Tensor:
-    angles = (angles / 2 + .5) % 1
+    angles = (angles / 2 + 0.5) % 1
     angles[:, :-1] = angles[:, :-1] * np.pi
     angles[:, -1] = angles[:, -1] * (2 * np.pi)
     cos = angles.cos()
     sin = angles.sin().cumprod(dim=1)
-    cos = torch.cat([
-        cos,
-        torch.ones(cos.shape[0], 1, cos.shape[-1], device="cuda").type_as(cos),
-    ], 1)
-    sin = torch.cat([
-        torch.ones(sin.shape[0], 1, sin.shape[-1], device="cuda").type_as(sin),
-        sin,
-    ], 1)
+    cos = torch.cat(
+        [
+            cos,
+            torch.ones(cos.shape[0], 1, cos.shape[-1], device="cuda").type_as(cos),
+        ],
+        1,
+    )
+    sin = torch.cat(
+        [
+            torch.ones(sin.shape[0], 1, sin.shape[-1], device="cuda").type_as(sin),
+            sin,
+        ],
+        1,
+    )
     return cos * sin
 
 
