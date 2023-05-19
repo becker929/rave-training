@@ -88,7 +88,6 @@ class Balancer:
                     logger(f"target_norm_{name}", ratio)
             else:
                 scale = self.weights.get(name, 1)
-                grads[name] *= scale.to('cuda')
 
                 if logger is not None:
                     logger(f"scale_{name}", scale)
