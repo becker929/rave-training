@@ -70,7 +70,7 @@ class Balancer:
             if profiler is not None:
                 profiler(f"partial backward {k}")
 
-        avg_norms = self.ema_averager(norms).to('cuda')
+        avg_norms = self.ema_averager(norms)
 
         if profiler is not None:
             profiler("grad norm estimation")
