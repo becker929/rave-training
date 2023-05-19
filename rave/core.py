@@ -222,7 +222,7 @@ class MelScale(nn.Module):
     def __init__(self, sample_rate: int, n_fft: int, n_mels: int) -> None:
         super().__init__()
         mel = li.filters.mel(sr=sample_rate, n_fft=n_fft, n_mels=n_mels)
-        mel = torch.from_numpy(mel).float()
+        mel = torch.from_numpy(mel).float().to("cuda")
         self.register_buffer('mel', mel)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

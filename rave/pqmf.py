@@ -198,7 +198,7 @@ class PQMF(nn.Module):
                 power
             ), "when using the polyphase algorithm, n_band must be a power of 2"
 
-        h = torch.from_numpy(h).float()
+        h = torch.from_numpy(h).float().to("cuda")
         hk = get_qmf_bank(h, n_band)
         hk = center_pad_next_pow_2(hk)
 

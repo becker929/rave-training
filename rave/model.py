@@ -369,13 +369,13 @@ class RAVE(pl.LightningModule):
             pca = PCA(z.shape[-1]).fit(z.cpu().numpy())
 
             components = pca.components_
-            components = torch.from_numpy(components).to(z)
+            components = torch.from_numpy(components).to("cuda").to(z)
             self.latent_pca.copy_(components)
 
             var = pca.explained_variance_ / np.sum(pca.explained_variance_)
             var = np.cumsum(var)
 
-            self.fidelity.copy_(torch.from_numpy(var).to(self.fidelity))
+            self.fidelity.copy_(torch.from_numpy(var).to("cuda").to(self.fidelity))
 
             var_percent = [.8, .9, .95, .99]
             for p in var_percent:
