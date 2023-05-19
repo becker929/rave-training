@@ -96,7 +96,7 @@ class EuclideanCodebook(nn.Module):
         self.threshold_ema_dead_code = threshold_ema_dead_code
 
         self.register_buffer("inited", torch.Tensor([not kmeans_init]))
-        self.register_buffer("cluster_size", torch.zeros(codebook_size))
+        self.register_buffer("cluster_size", torch.zeros(codebook_size, device="cuda"))
         self.register_buffer("embed", embed)
         self.register_buffer("embed_avg", embed.clone())
 

@@ -25,7 +25,7 @@ class Resampler(nn.Module):
 
         wc = np.pi / ratio
         filt = kaiser_filter(wc, 140)
-        filt = torch.from_numpy(filt).float()
+        filt = torch.from_numpy(filt, device="cuda").float()
 
         self.downsample = cc.Conv1d(
             1,

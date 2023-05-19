@@ -41,8 +41,7 @@ class Residual(nn.Module):
         self.cumulative_delay = additional_delay + cumulative_delay
 
     def forward(self, x):
-        x_cpu = x.to('cpu')
-        x_net, x_res = self.aligned(x_cpu)
+        x_net, x_res = self.aligned(x)
         return x_net + x_res
 
 
@@ -149,7 +148,7 @@ class ResidualStack(nn.Module):
 
     def forward(self, x):
         x = self.net(x)
-        x = torch.stack(x, 0).sum(0)
+        x = torch.stack(x, 0).to("cuda").sum(0)
         return x
 
 
@@ -207,7 +206,7 @@ class NoiseGenerator(nn.Module):
 
         self.register_buffer(
             "target_size",
-            torch.tensor(np.prod(ratios)).long(),
+            torch.tensor(np.prod(ratios)).long(), device="cuda")
         )
 
     def forward(self, x):
@@ -216,7 +215,7 @@ class NoiseGenerator(nn.Module):
         amp = amp.reshape(amp.shape[0], amp.shape[1], self.data_size, -1)
 
         ir = amp_to_impulse_response(amp, self.target_size)
-        noise = torch.rand_like(ir) * 2 - 1
+        noise = torch.rand_like(ir, device="cuda") * 2 - 1
 
         noise = fft_convolve(noise, ir).permute(0, 2, 1, 3)
         noise = noise.reshape(noise.shape[0], noise.shape[1], -1)
@@ -233,7 +232,7 @@ class GRU(nn.Module):
             num_layers=num_layers,
             batch_first=True,
         )
-        self.register_buffer("gru_state", torch.tensor(0))
+        self.register_buffer("gru_state", torch.tensor(0, device="cuda"))
         self.enabled = True
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -324,7 +323,7 @@ class Generator(nn.Module):
         self.loud_stride = loud_stride
         self.cumulative_delay = self.synth.cumulative_delay
 
-        self.register_buffer("warmed_up", torch.tensor(0))
+        self.register_buffer("warmed_up", torch.tensor(0, device="cuda"))
 
     def set_warmed_up(self, state: bool):
         print(f"device in set_warmed_up: {self.warmed_up.device}")
@@ -338,7 +337,7 @@ class Generator(nn.Module):
             waveform, loudness, noise = self.synth(x)
         else:
             waveform, loudness = self.synth(x)
-            noise = torch.zeros_like(waveform)
+            noise = torch.zeros_like(waveform, device="cuda")
 
         if self.loud_stride != 1:
             loudness = loudness.repeat_interleave(self.loud_stride)
@@ -602,7 +601,7 @@ class GeneratorV2(nn.Module):
         self.amplitude_modulation = amplitude_modulation
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x_cuda = x.to('cuda')
+        x_cuda = x.to("cuda")
         print(f"*** x_cuda.device: {x_cuda.device}")
         x_cuda = self.net(x_cuda)
 
@@ -620,8 +619,8 @@ class VariationalEncoder(nn.Module):
 
     def __init__(self, encoder):
         super().__init__()
-        self.encoder = encoder().to('cuda')
-        self.register_buffer("warmed_up", torch.tensor(0))
+        self.encoder = encoder().to("cuda")
+        self.register_buffer("warmed_up", torch.tensor(0, "cuda"))
 
     def reparametrize(self, z):
         mean, scale = z.chunk(2, 1)
@@ -629,7 +628,7 @@ class VariationalEncoder(nn.Module):
         var = std * std
         logvar = torch.log(var)
 
-        z = torch.randn_like(mean) * std + mean
+        z = torch.randn_like(mean, device="cuda") * std + mean
         kl = (mean * mean + var - logvar - 1).sum(1).mean()
 
         return z, kl
@@ -654,8 +653,8 @@ class WasserteinEncoder(nn.Module):
         noise_augmentation: int = 0,
     ):
         super().__init__()
-        self.encoder = encoder_cls().to('cuda')
-        self.register_buffer("warmed_up", torch.tensor(0))
+        self.encoder = encoder_cls().to("cuda")
+        self.register_buffer("warmed_up", torch.tensor(0, device="cuda"))
         self.noise_augmentation = noise_augmentation
 
     def compute_mean_kernel(self, x, y):
@@ -675,7 +674,7 @@ class WasserteinEncoder(nn.Module):
 
         if self.noise_augmentation:
             noise = torch.randn(z.shape[0], self.noise_augmentation,
-                                z.shape[-1]).type_as(z)
+                                z.shape[-1], device="cuda").type_as(z)
             z = torch.cat([z, noise], 1)
 
         return z, reg.mean()
@@ -700,11 +699,11 @@ class DiscreteEncoder(nn.Module):
                  num_quantizers,
                  noise_augmentation: int = 0):
         super().__init__()
-        self.encoder = encoder_cls().to('cuda')
+        self.encoder = encoder_cls().to("cuda")
         self.rvq = vq_cls()
         self.num_quantizers = num_quantizers
-        self.register_buffer("warmed_up", torch.tensor(0))
-        self.register_buffer("enabled", torch.tensor(0))
+        self.register_buffer("warmed_up", torch.tensor(0, device="cuda"))
+        self.register_buffer("enabled", torch.tensor(0, device="cuda"))
         self.noise_augmentation = noise_augmentation
 
     @torch.jit.ignore
@@ -712,11 +711,11 @@ class DiscreteEncoder(nn.Module):
         if self.enabled:
             z, diff, _ = self.rvq(z)
         else:
-            diff = torch.zeros_like(z).mean()
+            diff = torch.zeros_like(z, device="cuda").mean()
 
         if self.noise_augmentation:
             noise = torch.randn(z.shape[0], self.noise_augmentation,
-                                z.shape[-1]).type_as(z)
+                                z.shape[-1], device="cuda").type_as(z)
             z = torch.cat([z, noise], 1)
 
         return z, diff
@@ -735,11 +734,11 @@ class SphericalEncoder(nn.Module):
 
     def __init__(self, encoder_cls: Callable[[], nn.Module]) -> None:
         super().__init__()
-        self.encoder = encoder_cls().to('cuda')
+        self.encoder = encoder_cls().to("cuda")
 
     def reparametrize(self, z):
         norm_z = z / torch.norm(z, p=2, dim=1, keepdim=True)
-        reg = torch.zeros_like(z).mean()
+        reg = torch.zeros_like(z, device="cuda").mean()
         return norm_z, reg
 
     def set_warmed_up(self, state: bool):
@@ -774,10 +773,10 @@ def angles_to_unit_norm_vector(angles: torch.Tensor) -> torch.Tensor:
     sin = angles.sin().cumprod(dim=1)
     cos = torch.cat([
         cos,
-        torch.ones(cos.shape[0], 1, cos.shape[-1]).type_as(cos),
+        torch.ones(cos.shape[0], 1, cos.shape[-1], device="cuda").type_as(cos),
     ], 1)
     sin = torch.cat([
-        torch.ones(sin.shape[0], 1, sin.shape[-1]).type_as(sin),
+        torch.ones(sin.shape[0], 1, sin.shape[-1], device="cuda").type_as(sin),
         sin,
     ], 1)
     return cos * sin

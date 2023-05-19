@@ -50,7 +50,7 @@ def amp_to_impulse_response(amp, target_size):
     """
     transforms frequecny amps to ir on the last dimension
     """
-    amp = torch.stack([amp, torch.zeros_like(amp)], -1)
+    amp = torch.stack([amp, torch.zeros_like(amp, device="cuda")], -1)
     amp = torch.view_as_complex(amp)
     amp = fft.irfft(amp)
 
@@ -222,7 +222,7 @@ class MelScale(nn.Module):
     def __init__(self, sample_rate: int, n_fft: int, n_mels: int) -> None:
         super().__init__()
         mel = li.filters.mel(sr=sample_rate, n_fft=n_fft, n_mels=n_mels)
-        mel = torch.from_numpy(mel).float()
+        mel = torch.from_numpy(mel, device="cuda").float()
         self.register_buffer('mel', mel)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

@@ -11,7 +11,7 @@ from scipy.signal import firwin, kaiser, kaiser_beta, kaiserord
 
 
 def reverse_half(x):
-    mask = torch.ones_like(x)
+    mask = torch.ones_like(x, device="cuda")
     mask[..., 1::2, ::2] = -1
 
     return x * mask
@@ -40,9 +40,9 @@ def get_qmf_bank(h, n_band):
     n_band: int
         number of sub-bands
     """
-    k = torch.arange(n_band).reshape(-1, 1)
+    k = torch.arange(n_band, device="cuda").reshape(-1, 1)
     N = h.shape[-1]
-    t = torch.arange(-(N // 2), N // 2 + 1)
+    t = torch.arange(-(N // 2), N // 2 + 1, device="cuda")
 
     p = (-1)**k * math.pi / 4
 
@@ -59,7 +59,7 @@ def kaiser_filter(wc, atten, N=None):
     ----------
     wc: float
         Angular frequency
-    
+
     atten: float
         Attenuation (dB, positive)
     """
@@ -96,7 +96,7 @@ def polyphase_forward(x, hk, rearrange_filter=True):
     ----------
     x: torch.Tensor
         signal to analyse ( B x 1 x T )
-    
+
     hk: torch.Tensor
         filter bank ( M x T )
     """
@@ -114,7 +114,7 @@ def polyphase_inverse(x, hk, rearrange_filter=True):
     ----------
     x: torch.Tensor
         signal to synthesize from ( B x 1 x T )
-    
+
     hk: torch.Tensor
         filter bank ( M x T )
     """
@@ -141,7 +141,7 @@ def classic_forward(x, hk):
     ----------
     x: torch.Tensor
         signal to analyse ( B x 1 x T )
-    
+
     hk: torch.Tensor
         filter bank ( M x T )
     """
@@ -161,12 +161,12 @@ def classic_inverse(x, hk):
     ----------
     x: torch.Tensor
         signal to synthesize from ( B x 1 x T )
-    
+
     hk: torch.Tensor
         filter bank ( M x T )
     """
     hk = hk.flip(-1)
-    y = torch.zeros(*x.shape[:2], hk.shape[0] * x.shape[-1]).to(x)
+    y = torch.zeros(*x.shape[:2], hk.shape[0] * x.shape[-1], device="cuda").to(x)
     y[..., ::hk.shape[0]] = x * hk.shape[0]
     y = nn.functional.conv1d(
         y,
@@ -198,7 +198,7 @@ class PQMF(nn.Module):
                 power
             ), "when using the polyphase algorithm, n_band must be a power of 2"
 
-        h = torch.from_numpy(h).float()
+        h = torch.from_numpy(h, device="cuda").float()
         hk = get_qmf_bank(h, n_band)
         hk = center_pad_next_pow_2(hk)
 

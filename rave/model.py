@@ -61,7 +61,7 @@ class QuantizeCallback(WarmupCallback):
 
         if self.state['training_steps'] >= pl_module.warmup_quantize:
             if isinstance(pl_module.encoder, DiscreteEncoder):
-                pl_module.encoder.enabled = torch.tensor(1).type_as(
+                pl_module.encoder.enabled = torch.tensor(1, device="cuda").type_as(
                     pl_module.encoder.enabled)
         self.state['training_steps'] += 1
 
@@ -94,20 +94,20 @@ class RAVE(pl.LightningModule):
 
         self.pqmf = None
         if pqmf is not None:
-            self.pqmf = pqmf().to('cuda')
+            self.pqmf = pqmf().to("cuda")
 
-        self.encoder = encoder().to('cuda')
-        self.decoder = decoder().to('cuda')
-        self.discriminator = discriminator().to('cuda')
+        self.encoder = encoder().to("cuda")
+        self.decoder = decoder().to("cuda")
+        self.discriminator = discriminator().to("cuda")
 
-        self.audio_distance = audio_distance().to('cuda')
-        self.multiband_audio_distance = multiband_audio_distance().to('cuda')
+        self.audio_distance = audio_distance().to("cuda")
+        self.multiband_audio_distance = multiband_audio_distance().to("cuda")
 
         self.gan_loss = gan_loss
 
-        self.register_buffer("latent_pca", torch.eye(latent_size))
-        self.register_buffer("latent_mean", torch.zeros(latent_size))
-        self.register_buffer("fidelity", torch.zeros(latent_size))
+        self.register_buffer("latent_pca", torch.eye(latent_size, device="cuda"))
+        self.register_buffer("latent_mean", torch.zeros(latent_size, device="cuda"))
+        self.register_buffer("fidelity", torch.zeros(latent_size), device="cuda")
 
         self.latent_size = latent_size
 
@@ -133,7 +133,7 @@ class RAVE(pl.LightningModule):
         self.enable_pqmf_encode = enable_pqmf_encode
         self.enable_pqmf_decode = enable_pqmf_decode
 
-        self.register_buffer("receptive_field", torch.tensor([0, 0]).long())
+        self.register_buffer("receptive_field", torch.tensor([0, 0], device="cuda").long())
 
     def configure_optimizers(self):
         gen_p = list(self.encoder.parameters())
@@ -160,8 +160,8 @@ class RAVE(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         p = Profiler()
         gen_opt, dis_opt = self.optimizers()
-        
-        with torch.autocast(device_type='cuda', dtype=torch.float16, enabled=True):
+
+        with torch.autocast(device_type="cuda", dtype=torch.float16, enabled=True):
             x = batch.unsqueeze(1)
 
             if self.pqmf is not None:
@@ -257,10 +257,10 @@ class RAVE(pl.LightningModule):
                     feature_real)
 
             else:
-                pred_real = torch.tensor(0.).to(x)
-                pred_fake = torch.tensor(0.).to(x)
-                loss_dis = torch.tensor(0.).to(x)
-                loss_adv = torch.tensor(0.).to(x)
+                pred_real = torch.tensor(0., device="cuda").to(x)
+                pred_fake = torch.tensor(0., device="cuda").to(x)
+                loss_dis = torch.tensor(0., device="cuda").to(x)
+                loss_adv = torch.tensor(0., device="cuda").to(x)
             p.tick('discrimination')
 
             # COMPOSE GEN LOSS
@@ -369,13 +369,13 @@ class RAVE(pl.LightningModule):
             pca = PCA(z.shape[-1]).fit(z.cpu().numpy())
 
             components = pca.components_
-            components = torch.from_numpy(components).to(z)
+            components = torch.from_numpy(components, device="cuda").to(z)
             self.latent_pca.copy_(components)
 
             var = pca.explained_variance_ / np.sum(pca.explained_variance_)
             var = np.cumsum(var)
 
-            self.fidelity.copy_(torch.from_numpy(var).to(self.fidelity))
+            self.fidelity.copy_(torch.from_numpy(var, device="cuda").to(self.fidelity))
 
             var_percent = [.8, .9, .95, .99]
             for p in var_percent:

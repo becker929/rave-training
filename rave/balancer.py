@@ -57,15 +57,15 @@ class Balancer:
                 retain_graph=True,
             )
 
-            if (nans := torch.isnan(grads[k])).any().to("cuda"):
-                count = nans.float().mean().to("cuda")
+            if (nans := torch.isnan(grads[k].to('cuda'))).any():
+                count = nans.float().to("cuda").mean()
                 grads[k] = torch.where(
                     nans, torch.zeros_like(nans, device="cuda"), grads[k]
                 )
                 if logger is not None:
                     logger(f"{k}_nan_ratio", count)
 
-            norms[k] = grads[k].norm(dim=tuple(range(1, grads[k].dim()))).mean().to('cuda')
+            norms[k] = grads[k].to("cuda").norm(dim=tuple(range(1, grads[k].dim()))).mean()
 
             if profiler is not None:
                 profiler(f"partial backward {k}")
@@ -96,7 +96,7 @@ class Balancer:
         if profiler is not None:
             profiler("norm scaling")
 
-        full_grad = sum([grads[name].to('cuda') for name in avg_norms.keys()]).to('cuda')
+        full_grad = sum([grads[name].to("cuda") for name in avg_norms.keys()]).to("cuda")
         model_output.backward(full_grad, retain_graph=True)
 
         if profiler is not None:
@@ -105,7 +105,7 @@ class Balancer:
         if self.deny_list is not None:
             for k in self.deny_list:
                 if k in losses:
-                    loss = losses[k].to('cuda') * self.weights.get(k, 1)
+                    loss = losses[k].to("cuda") * self.weights.get(k, 1)
                     if logger is not None:
                         logger(f"scale_{name}", scale)
                         logger(f"grad_norm_{name}", grads[name].norm())
