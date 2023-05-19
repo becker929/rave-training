@@ -81,7 +81,6 @@ class Balancer:
             if self.scale_gradients:
                 ratio = self.weights.get(name, 1) / sum_weights
                 scale = ratio / (norm + 1e-6)
-                grads[name] *= scale.to('cuda')
 
                 if logger is not None:
                     logger(f"scale_{name}", scale)
