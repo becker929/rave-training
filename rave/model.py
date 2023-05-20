@@ -318,8 +318,7 @@ class RAVE(pl.LightningModule):
             x_multiband = self.pqmf(x)
 
         if self.enable_pqmf_encode:
-            x_multiband_cpu = x_multiband.to('cpu')
-            z = self.encoder(x_multiband_cpu)
+            z = self.encoder(x_multiband)
         else:
             z = self.encoder(x)
 
@@ -329,8 +328,7 @@ class RAVE(pl.LightningModule):
             mean = None
 
         z = self.encoder.reparametrize(z)[0]
-        z_cpu = z.to('cpu')
-        y = self.decoder(z_cpu)
+        y = self.decoder(z)
 
         if self.pqmf is not None:
             x = self.pqmf.inverse(x_multiband)
