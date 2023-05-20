@@ -461,7 +461,7 @@ class EncoderV2(nn.Module):
                     capacity,
                     kernel_size=kernel_size * 2 + 1,
                     padding=cc.get_padding(kernel_size * 2 + 1),
-                )
+                ).to("cuda")
             ),
         ]
 
@@ -475,12 +475,12 @@ class EncoderV2(nn.Module):
                             dim=num_channels,
                             kernel_size=kernel_size,
                             dilation=d,
-                        )
-                    )
+                        ).to("cuda")
+                    ).to("cuda")
                 )
 
             # ADD DOWNSAMPLING UNIT
-            net.append(nn.LeakyReLU(0.2))
+            net.append(nn.LeakyReLU(0.2).to("cuda"))
 
             if keep_dim:
                 out_channels = num_channels * r
@@ -494,13 +494,13 @@ class EncoderV2(nn.Module):
                         kernel_size=2 * r,
                         stride=r,
                         padding=cc.get_padding(2 * r, r),
-                    )
+                    ).to("cuda")
                 )
             )
 
             num_channels = out_channels
 
-        net.append(nn.LeakyReLU(0.2))
+        net.append(nn.LeakyReLU(0.2).to("cuda"))
         net.append(
             normalization(
                 cc.Conv1d(
@@ -508,7 +508,7 @@ class EncoderV2(nn.Module):
                     latent_size * n_out,
                     kernel_size=kernel_size,
                     padding=cc.get_padding(kernel_size),
-                )
+                ).to("cuda")
             )
         )
 
