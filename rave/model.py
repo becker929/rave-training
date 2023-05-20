@@ -311,6 +311,7 @@ class RAVE(pl.LightningModule):
         return self.decode(self.encode(x))
 
     def validation_step(self, batch, batch_idx):
+        batch = batch.to("cuda")
         x = batch.unsqueeze(1)
 
         if self.pqmf is not None:
