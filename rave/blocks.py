@@ -605,6 +605,7 @@ class GeneratorV2(nn.Module):
 
         self.net = cc.CachedSequential(*net)
         self.amplitude_modulation = amplitude_modulation
+        self.to("cuda")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.net(x)
