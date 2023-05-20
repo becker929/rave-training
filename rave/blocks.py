@@ -626,6 +626,7 @@ class VariationalEncoder(nn.Module):
         super().__init__()
         self.encoder = encoder().to("cuda")
         self.register_buffer("warmed_up", torch.tensor(0, device="cuda"))
+        self.to("cuda")
 
     def reparametrize(self, z):
         mean, scale = z.chunk(2, 1)
