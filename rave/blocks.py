@@ -462,7 +462,7 @@ class EncoderV2(nn.Module):
                     kernel_size=kernel_size * 2 + 1,
                     padding=cc.get_padding(kernel_size * 2 + 1),
                 ).to("cuda")
-            ),
+            ).to("cuda"),
         ]
 
         num_channels = capacity
@@ -495,7 +495,7 @@ class EncoderV2(nn.Module):
                         stride=r,
                         padding=cc.get_padding(2 * r, r),
                     ).to("cuda")
-                )
+                ).to("cuda")
             )
 
             num_channels = out_channels
@@ -509,13 +509,13 @@ class EncoderV2(nn.Module):
                     kernel_size=kernel_size,
                     padding=cc.get_padding(kernel_size),
                 ).to("cuda")
-            )
+            ).to("cuda")
         )
 
         if recurrent_layer is not None:
-            net.append(recurrent_layer(latent_size * n_out))
+            net.append(recurrent_layer(latent_size * n_out).to("cuda"))
 
-        self.net = cc.CachedSequential(*net)
+        self.net = cc.CachedSequential(*net).to("cuda")
         self.to("cuda")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
