@@ -607,14 +607,13 @@ class GeneratorV2(nn.Module):
         self.amplitude_modulation = amplitude_modulation
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x_cuda = x.to("cuda")
-        x_cuda = self.net(x_cuda)
+        x = self.net(x)
 
         if self.amplitude_modulation:
-            x_cuda, amplitude = x_cuda.split(x_cuda.shape[1] // 2, 1)
-            x_cuda = x_cuda * torch.sigmoid(amplitude)
+            x, amplitude = x.split(x.shape[1] // 2, 1)
+            x = x * torch.sigmoid(amplitude)
 
-        return torch.tanh(x_cuda)
+        return torch.tanh(x)
 
     def set_warmed_up(self, state: bool):
         pass
