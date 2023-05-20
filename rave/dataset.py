@@ -222,8 +222,6 @@ def split_dataset(dataset, percent, max_residual: Optional[int] = None):
     if max_residual is not None:
         split2 = min(max_residual, split2)
         split1 = len(dataset) - split2
-    print(f'train set: {split1} examples')
-    print(f'val set: {split2} examples')
     split1, split2 = data.random_split(
         dataset,
         [split1, split2],

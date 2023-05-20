@@ -57,7 +57,6 @@ def amp_to_impulse_response(amp, target_size):
     filter_size = amp.shape[-1]
 
     amp = torch.roll(amp, filter_size // 2, -1)
-    print(f"device in amp_to_impulse_response: {amp.device}")
     win = torch.hann_window(filter_size, dtype=amp.dtype, device=amp.device)
 
     amp = amp * win
@@ -147,7 +146,6 @@ def get_rave_receptive_field(model: nn.Module):
     N = 2**15
     model.eval()
     device = next(iter(model.parameters())).device
-    print(f"device in get_rave_receptive_field: {device}")
 
     for module in model.modules():
         if hasattr(module, 'gru_state') or hasattr(module, 'temporal'):
@@ -178,7 +176,6 @@ def get_rave_receptive_field(model: nn.Module):
             module.enable()
     ratio = x.shape[-1] // z.shape[-1]
     rate = model.sr / ratio
-    print(f"Compression ratio: {ratio}x (~{rate:.1f}Hz @ {model.sr}Hz)")
     return left_receptive_field, right_receptive_field
 
 

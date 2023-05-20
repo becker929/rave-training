@@ -319,7 +319,6 @@ class Generator(nn.Module):
         self.register_buffer("warmed_up", torch.tensor(0, device="cuda"))
 
     def set_warmed_up(self, state: bool):
-        print(f"device in set_warmed_up: {self.warmed_up.device}")
         state = torch.tensor(int(state), device=self.warmed_up.device)
         self.warmed_up = state
 
@@ -609,7 +608,6 @@ class GeneratorV2(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x_cuda = x.to("cuda")
-        print(f"*** x_cuda.device: {x_cuda.device}")
         x_cuda = self.net(x_cuda)
 
         if self.amplitude_modulation:
@@ -640,7 +638,6 @@ class VariationalEncoder(nn.Module):
         return z, kl
 
     def set_warmed_up(self, state: bool):
-        print(f"device in set_warmed_up: {self.warmed_up.device}")
         state = torch.tensor(int(state), device=self.warmed_up.device)
         self.warmed_up = state
 
@@ -686,7 +683,6 @@ class WasserteinEncoder(nn.Module):
         return z, reg.mean()
 
     def set_warmed_up(self, state: bool):
-        print(f"device in set_warmed_up: {self.warmed_up.device}")
         state = torch.tensor(int(state), device=self.warmed_up.device)
         self.warmed_up = state
 
@@ -725,7 +721,6 @@ class DiscreteEncoder(nn.Module):
         return z, diff
 
     def set_warmed_up(self, state: bool):
-        print(f"device in set_warmed_up: {self.warmed_up.device}")
         state = torch.tensor(int(state), device=self.warmed_up.device)
         self.warmed_up = state
 

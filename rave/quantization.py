@@ -24,7 +24,6 @@ def uniform_init(*shape: int):
 
 def sample_vectors(samples, num: int):
     num_samples, device = samples.shape[0], samples.device
-    print(f"device in sample_vectors: {device}")
 
     if num_samples >= num:
         indices = torch.randperm(num_samples, device=device)[:num]
@@ -251,7 +250,6 @@ class VectorQuantization(nn.Module):
 
     def forward(self, x):
         device = x.device
-        print(f"device in vector quantization forward: {device}")
         x = x.permute(0, 2, 1)
         x = self.project_in(x)
 
@@ -313,7 +311,6 @@ class ResidualVectorQuantization(nn.Module):
         return out_indices
 
     def decode(self, q_indices: torch.Tensor) -> torch.Tensor:
-        print(f"q_indices.device: {q_indices.device}")
         quantized_out = torch.tensor(0.0, device=q_indices.device)
         for i, layer in enumerate(self.layers):
             quantized = layer.decode(q_indices[:, i])
