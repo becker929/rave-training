@@ -516,6 +516,7 @@ class EncoderV2(nn.Module):
             net.append(recurrent_layer(latent_size * n_out))
 
         self.net = cc.CachedSequential(*net)
+        self.to("cuda")
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.spectrogram is not None:
