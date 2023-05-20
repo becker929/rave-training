@@ -450,7 +450,7 @@ class EncoderV2(nn.Module):
         dilations_list = normalize_dilations(dilations, ratios)
 
         if spectrogram is not None:
-            self.spectrogram = spectrogram()
+            self.spectrogram = spectrogram().to("cuda")
         else:
             self.spectrogram = None
 
@@ -521,7 +521,7 @@ class EncoderV2(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         if self.spectrogram is not None:
             x = self.spectrogram(x[:, 0])[..., :-1]
-            x = torch.log1p(x)
+            x = torch.log1p(x).to("cuda")
         return self.net(x)
 
 
