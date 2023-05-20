@@ -70,8 +70,6 @@ class AudioDataset(data.Dataset):
         if self._transforms is not None:
             audio = self._transforms(audio)
 
-        audio = torch.from_numpy(audio).to(device="cuda")
-
         return audio
 
 
