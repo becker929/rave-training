@@ -14,7 +14,7 @@ Currently, A10 instances on Lambda Cloud (cloud.lambdalabs.com) are the target d
 1. Run script `./setup-rave-lambdalabs.sh` (use your access keys and bucket name as parameters if using S3)
 1. Open `rave-timing.ipynb`, choosing `rave_env` as the kernel
 1. Set the MAX_STEPS & config to use
-    - by default, will use `test`, and run a short training run (1500 steps, ~5 minutes)
+    - by default, will use `v2`, and run a short training run (1500 steps, ~5 minutes)
     - For a full training run, use `v2` and set MAX_STEPS to between 3_000_000 and 6_000_000
 1. Run all cells & confirm that RAVE is training
 1. In a terminal, run `tensorboard --logdir runs --port 6080`
