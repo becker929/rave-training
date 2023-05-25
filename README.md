@@ -30,3 +30,11 @@ The `rave` subfolder contains a fork of `RAVE/rave`.
 
 Local changes to `rave`:
 - Apply Automatic Mixed Precision (amp) to forward pass
+
+Todo:
+- Test & Default to Wasserstein
+- Compilation using torch.compile (in progress)
+- Checking for simple best practices
+- Experiment with Composer
+- Experiment with increased batch size (24 vs 8)
+- Experiment with reimplementation in JAX
