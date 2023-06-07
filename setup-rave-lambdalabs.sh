@@ -71,7 +71,7 @@ echo "CHECKING TORCH + TORCHVISION VERSION"
 .pyenv/versions/3.10.11/bin/python3.10 -c "import torchvision;"
 
 echo "PREPROCESSING DATA"
-/home/ubuntu/.pyenv/versions/3.10.11/bin/python3.10 rave preprocess \
+/home/ubuntu/.pyenv/versions/3.10.11/bin/rave preprocess \
 --input_path ./training-data \
 --output_path ./preprocessed
 
