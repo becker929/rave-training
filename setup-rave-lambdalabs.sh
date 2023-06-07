@@ -83,4 +83,4 @@ echo "SETTING UP GIT FOR JUPYTER"
 /home/ubuntu/.pyenv/versions/3.10.11/bin/python3.10 -m pip install nbdev && \
 /home/ubuntu/.pyenv/versions/3.10.11/bin/nbdev_install_hooks
 
-echo "SETUP COMPLETE; MAKE SURE YOU KNOW WHICH RAVE YOUR TRAINING USES (official vs rave-training local version)
+echo "SETUP COMPLETE; MAKE SURE YOU KNOW WHICH RAVE YOUR TRAINING USES (official vs rave-training local version)"
