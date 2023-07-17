@@ -1,0 +1,58 @@
+from __gin__ import dynamic_registration
+
+include "configs/v2.gin"
+
+import rave
+from rave import core
+from rave import blocks
+from rave import balancer
+from rave import discriminator
+from rave import quantization
+
+import torch.nn as nn
+
+NUM_QUANTIZERS = 16
+RATIOS = [4, 4, 2, 2]
+LATENT_SIZE = 128
+CODEBOOK_SIZE = 1024
+DYNAMIC_MASKING = False
+CAPACITY = 96
+NOISE_AUGMENTATION = 128
+
+core.AudioDistanceV1.log_epsilon = 1
+
+# ENCODER
+
+blocks.DiscreteEncoder:
+    encoder_cls = @blocks.EncoderV2
+    vq_cls = @quantization.ResidualVectorQuantization
+    num_quantizers = %NUM_QUANTIZERS
+    noise_augmentation = %NOISE_AUGMENTATION
+
+blocks.EncoderV2:
+    n_out = 1
+
+quantization.ResidualVectorQuantization:
+    num_quantizers = %NUM_QUANTIZERS
+    dim = %LATENT_SIZE
+    codebook_size = %CODEBOOK_SIZE
+
+# BALANCER
+balancer.Balancer:
+    weights = {
+        'feature_matching' : 20,
+        'regularization': .1,
+    }
+    scale_gradients = False
+
+# RAVE
+
+rave.RAVE:
+    encoder = @blocks.DiscreteEncoder
+    phase_1_duration = 200000
+    warmup_quantize = -1
+    discriminator = @discriminator.CombineDiscriminators
+    gan_loss = @core.hinge_gan
+    valid_signal_crop = True
+    num_skipped_features = 0
+    update_discriminator_every = 4
