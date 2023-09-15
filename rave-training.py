@@ -20,10 +20,10 @@ parser.add_argument('-s', '--steps', help='Max steps for the training run.', req
 
 args = parser.parse_args()
 
-NAME = args.name
+NAME = str(args.name)
 CONFIG = ["v2", "wasserstein"]
 DB_PATH = "/home/ubuntu/preprocessed/"
-MAX_STEPS = args.steps
+MAX_STEPS = int(args.steps)
 VAL_EVERY = 10_000
 N_SIGNAL = 131072
 BATCH = 8
