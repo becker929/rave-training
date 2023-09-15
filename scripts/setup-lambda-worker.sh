@@ -57,4 +57,4 @@ echo "INSTALLING PYTHON PACKAGES"
 /home/ubuntu/.pyenv/versions/3.10.11/bin/python3.10 -m pip install boto3
 
 echo "CHECKING TORCH + TORCHVISION VERSION"
-.pyenv/versions/3.10.11/bin/python3.10 -c "import torchvision;"
+/home/ubuntu/.pyenv/versions/3.10.11/bin/python3.10 -c "import torchvision;"
