@@ -16,13 +16,14 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-n', '--name', help='Name of the training run.', required=True)
+parser.add_argument('-s', '--steps', help='Max steps for the training run.', required=True)
 
 args = parser.parse_args()
 
 NAME = args.name
 CONFIG = ["v2", "wasserstein"]
 DB_PATH = "/home/ubuntu/preprocessed/"
-MAX_STEPS = sys.argv[1]
+MAX_STEPS = args.steps
 VAL_EVERY = 10_000
 N_SIGNAL = 131072
 BATCH = 8
