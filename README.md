@@ -1,3 +1,6 @@
+# STATUS
+- Currently a bit broken as I'm working on the server (eta 2023-10-01)
+  
 # rave-training
 Utilities and experiments for training RAVE. 
 
