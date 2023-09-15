@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 import rave
 import rave.core
 import rave.dataset
+import sys
 
 import argparse
 
@@ -21,7 +22,7 @@ args = parser.parse_args()
 NAME = args.name
 CONFIG = ["v2", "wasserstein"]
 DB_PATH = "/home/ubuntu/preprocessed/"
-MAX_STEPS = 3_000_000
+MAX_STEPS = sys.argv[1]
 VAL_EVERY = 10_000
 N_SIGNAL = 131072
 BATCH = 8
