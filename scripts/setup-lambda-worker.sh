@@ -14,6 +14,9 @@ fi
 
 echo "CLEANING UP"
 rm -rf /home/ubuntu/.pyenv
+rm -rf /home/ubuntu/training-data
+rm -rf /home/ubuntu/preprocessed
+rm -rf /home/ubuntu/rave-training
 cd /home/ubuntu
 
 echo "UPDATING"
