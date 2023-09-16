@@ -1,3 +1,4 @@
+python3 -m pip install flask gunicorn
 # #!/bin/bash
 # set -e
 
