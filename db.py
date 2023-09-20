@@ -1,11 +1,17 @@
 import collections
 import json
+import os
 import random
 import sqlite3
 import uuid
 from datetime import datetime
 
-DB_PATH = "/home/ec2-user/houseparty.db"
+HOME_DIR = os.environ.get("HOME_DIR")
+if HOME_DIR == None:
+    raise Exception("HOME_DIR environment variable not set")
+
+WORDS_FILE = os.path.join(HOME_DIR, "rave-training/words.txt")
+DB_PATH = os.path.join(HOME_DIR, "houseparty.db")
 TIME_FMT = "%Y-%m-%d"
 TIME_FMT_SYSTEM = "%Y%m%d%H%M"
 
@@ -247,7 +253,7 @@ def get_work_order_by_stripe_transaction(stripe_transaction_id):
 
 
 def get_random_word():
-    with open("rave-training/words.txt") as f:
+    with open(WORDS_FILE) as f:
         words = f.readlines()
     return random.choice(words).strip()
 

@@ -6,11 +6,13 @@ import uuid
 import requests
 import db
 import logging
-import random
 from botocore.exceptions import ClientError
 from flask import Flask, render_template, jsonify, request, redirect
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
+HOME_DIR = os.environ.get("HOME_DIR")
+if HOME_DIR == None:
+    raise Exception("HOME_DIR environment variable not set")
 
 BUCKET = "rave-training-data"
 BASE_PRICE = 8400
@@ -51,16 +53,15 @@ def place_work_order():
     training_job_id = db.create_training_job(dataset_id, training_job_settings)
     price_metadata = PRICE_METADATA
     price_id = db.insert_price(price_metadata)
-    work_order_id = db.create_work_order(
-        training_job_id, dataset_id, price_id
-    )
-    print("**** work order id", work_order_id)
+    work_order_id = db.create_work_order(training_job_id, dataset_id, price_id)
     training_job = db.get_training_job(training_job_id)
     training_job_name = training_job["TrainingJobName"]
-    return jsonify({
-        "workOrderId": work_order_id,
-        "trainingJobName": training_job_name,
-    })
+    return jsonify(
+        {
+            "workOrderId": work_order_id,
+            "trainingJobName": training_job_name,
+        }
+    )
 
 
 @app.route("/order", methods=["GET"])
@@ -74,6 +75,7 @@ def get_work_order_by_stripe_transaction():
 def get_work_order(work_order_id):
     pass
 
+
 @app.route("/test")
 def test():
     # test the /order endpoint
@@ -82,7 +84,7 @@ def test():
     data = {
         "trainingJobName": "test",
         "trainingJobSettings": {"config": "v2-wasserstein"},
-        "datasetId": "83cd82eb-acb8-4f87-a042-a9c0debcee09"
+        "datasetId": "83cd82eb-acb8-4f87-a042-a9c0debcee09",
     }
     response = requests.post("http://localhost:4242/order", json=data)
     return response.text
