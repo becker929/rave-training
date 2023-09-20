@@ -1,5 +1,5 @@
 python3 -m pip install --upgrade pip
-python3 -m pip install flask gunicorn requests rocketry pydantic==1.10.10
+python3 -m pip install flask gunicorn requests rocketry stripe boto3 pydantic==1.10.10
 
 # echo "SETTING UP SSH"
 # # todo: upload pem file somehow
