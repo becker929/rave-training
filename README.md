@@ -2,7 +2,7 @@
 - Currently a bit broken as I'm working on the server (eta 2023-10-01)
   
 # rave-training
-Utilities and experiments for training RAVE. 
+Utilities and experiments for training RAVE, which can be found at the official repo here: https://github.com/acids-ircam/RAVE
 
 Currently, A10 instances on Lambda Cloud (cloud.lambdalabs.com) are the target deployment environment.
 
