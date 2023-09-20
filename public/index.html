@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+
+<head>
+    <script async src="https://js.stripe.com/v3/pricing-table.js"></script>
+    <link rel="stylesheet" href="https://cdn.simplecss.org/simple.min.css">
+    <style>
+        /* Style for the spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(0, 0, 0, 0.2);
+            border-top-color: #3498db;
+            border-radius: 50%;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        /* Keyframe animation for the spinner */
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .checkmark::before {
+            content: "\2705";
+            /* Unicode value for green checkmark emoji */
+        }
+    </style>
+</head>
+
+<body>
+    <div id="main">
+        <h1>Step 1: Upload a file</h1>
+        <span>Upload 1 mp3 file, max 200MB</span>
+        <br />
+        <input id="file-upload" type="file" name="file-upload" />
+        <input id="upload-button" type="button" value="Upload" />
+        <span id="upload-status"></span>
+
+        <h1>Step 2: RAVE Settings</h1>
+        <span>RAVE Config</span>
+        <input type="select" disabled placeholder="v2-wasserstein" />
+        <br />
+        <span>Format</span>
+        <input type="select" disabled placeholder="PyTorch model" />
+        <br />
+        <span>Training Job Name</span>
+        <input type="text" id="training-job-name" disabled />
+
+        <h1>Step 3: Confirm & Pay</h1>
+        <stripe-pricing-table hidden="true" pricing-table-id="prctbl_1Ns9WzGMUQNt9PzHJtkrkbUb"
+            publishable-key="pk_live_51NnrU6GMUQNt9PzHVJZshbBQmnRwk5hQ3cOYWO9RS89Z5pTB9yO4VNHk6Z77ojYY26Z1mWhmnK4O4SfnYW6bjbjp00G287Ot41">
+        </stripe-pricing-table>
+    </div> <!-- end main -->
+
+    <script>
+        const uploadEl = document.querySelector('#file-upload');
+        const uploadButtonEl = document.querySelector('#upload-button');
+        const uploadStatusEl = document.querySelector('#upload-status');
+        const trainingJobNameEl = document.querySelector('#training-job-name');
+
+        uploadButtonEl.addEventListener('click', async (e) => {
+            e.preventDefault();
+
+            const file = uploadEl.files[0];
+            if (!file) {
+                alert('No file selected.');
+                return
+            }
+            const fileType = file.type; // get file type
+            const fileSize = file.size; // get file size in bytes
+            // check if file is an mp3 and less than 200MB
+            if (fileType === 'audio/mpeg' && fileSize <= 200 * 1000 * 1000) {
+                // proceed with upload
+            } else {
+                // reject file
+                alert('File must be an mp3 and less than 200MB.');
+                return
+            }
+
+            uploadButtonEl.disabled = true;
+            uploadStatusEl.classList.add('spinner');
+            const {fields, url, datasetId} = await fetch('/request-upload').then(res => res.json());
+            const uploadFormData = new FormData();
+            Object.entries(fields).forEach(([key, value]) => {
+                uploadFormData.append(key, value);
+            });
+            uploadFormData.append('file', uploadEl.files[0]);
+            const response = await fetch(url, {
+                method: 'POST',
+                body: uploadFormData,
+            });
+            uploadStatusEl.classList.remove('spinner');
+            uploadStatusEl.classList.add('checkmark');
+
+            // call the backend to create a new order
+            trainingJobSettings = {"config": "v2-wasserstein", "format": "pytorch"};
+            const {workOrderId, trainingJobName} = await fetch('/order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    datasetId: datasetId,
+                    trainingJobSettings: trainingJobSettings,
+                }),
+            }).then(res => res.json());
+            console.log(workOrderId, trainingJobName);
+
+            // make the training job name wide enough to show the full name
+            // show the generated training job name
+            trainingJobNameEl.style.width = trainingJobName.length + 'ch';
+            trainingJobNameEl.value = trainingJobName;
+
+            // add the OrderId to the pricing table
+            const pricingTableEl = document.querySelector('stripe-pricing-table');
+            pricingTableEl.setAttribute('client-reference-id', workOrderId);
+
+            // show the pricing table
+            pricingTableEl.hidden = false;
+        });
+    </script>
+</body>
+
+</html>
