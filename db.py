@@ -252,6 +252,33 @@ def get_work_order_by_stripe_transaction(stripe_transaction_id):
         return work_orders[0]
 
 
+def delete_work_order(work_order_id):
+    update("""delete from WorkOrder where WorkOrderId = ?;""", (work_order_id,))
+    return work_order_id
+
+
+def delete_work_order_full(work_order_id):
+    work_order = get_work_order(work_order_id)
+    if work_order == None:
+        return None
+    else:
+        training_job_id = work_order["TrainingJobId"]
+        dataset_id = work_order["DatasetId"]
+        price_id = work_order["PriceId"]
+        dataset = get_dataset(dataset_id)
+        dataset_s3_location_id = dataset["DatasetS3LocationId"]
+        training_job = get_training_job(training_job_id)
+        output_s3_location_id = training_job["OutputS3LocationId"]
+
+        delete_s3_location(dataset_s3_location_id)
+        delete_s3_location(output_s3_location_id)
+        delete_training_job(training_job_id)
+        delete_dataset(dataset_id)
+        delete_price(price_id)
+        delete_work_order(work_order_id)
+        return work_order_id
+
+
 def get_random_word():
     with open(WORDS_FILE) as f:
         words = f.readlines()
